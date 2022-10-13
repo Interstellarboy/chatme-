@@ -1,7 +1,19 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { instrument } = require("@socket.io/admin-ui");
+const createAdapter = require("@socket.io/redis-adapter").createAdapter;
+const redis = require("redis");
+const moment = require("moment")
 
+const { createClient } = redis;
+
+
+(async () => {
+    pubClient = createClient({ url: "redis://127.0.0.1:6379" });
+    await pubClient.connect();
+    subClient = pubClient.duplicate();
+    io.adapter(createAdapter(pubClient, subClient));
+})();
 
 
 const httpServer = createServer();
@@ -15,29 +27,54 @@ const io = new Server(httpServer, {
 
 // let last8Messages = []
 // let messageCounter = 0
-let user = [{}]
+
+
+function userCreate(id, username, room) {
+    const usercreate = {
+        id,
+        username,
+        room
+    }
+    const doesExist = users.find((find) => find.id === id)
+    if (doesExist != null) return userCreate
+
+    users.push(usercreate)
+
+    return usercreate
+}
+
+function formatMessage(username, text) {
+    return {
+        username,
+        text,
+        time: moment().format('h:mm a')
+    }
+}
+let users = []
+
+function getUser(id) {
+    return users.find(userfind => userfind.id === id)
+
+}
+
+let user
+
 io.on("connection", (socket) => {
     socket.on('room join', (username, room) => {
-        function userCreate(username, room) {
-            return {
-                username,
-                room
-            }
-        }
-        user = []
-        user.push(userCreate(username, room))
-        socket.join(room)
+        user = userCreate(socket.id, username, room)
+        // socket.join(user.room)
         io.emit('joined', `${username} joined the room ${room}`)
-
-    })
-    socket.on('get-message', msg => {
-        const userRoom = user[0].room
-        socket.join(userRoom)
-        socket.broadcast.to(userRoom).emit('message', msg)
-
     })
 
+    socket.on('get-message', (msg, username) => {
+        // const userRoom = user[0].room
+        // const username = user[0].username
+        socket.join(user.room)
+        io.to(user.room).emit('message', formatMessage(username || "default", msg))
+        // console.log(socket.id, users)
+    })
 })
+
 instrument(io, {
     auth: false
 });

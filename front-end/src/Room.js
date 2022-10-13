@@ -8,57 +8,53 @@ function Room() {
     const state = useLocation()
     const username = state.state.username
     const room = state.state.room
-    // const room = useRef()
-    // console.log(username)
-    const [loginMessage, setLoginMessage] = useState([])
+    let loggedUsername
     const input = useRef()
-    const [chatValue, setChatValue] = useState([])
+    const [chatValue, setChatValue] = useState([{}])
     const [joined, setJoined] = useState([])
     const socket = io('http://localhost:9000')
+
     function readInput(e) {
-        // console.log(inputValue)
-        // const roomValue = room.current.value
-        // socket.emit('chat message', inputValue)
-        // socket.emit('message', inputValue)
-        // socket.emit('room', roomValue)
         e.preventDefault()
-        socket.emit('room join', username, room)
         const inputValue = input.current.value
-        socket.emit('get-message', inputValue)
-
-        socket.on('message', (msg) => {
-            console.log(msg)
-            setChatValue([...chatValue, msg])
-
+        socket.emit('get-message', inputValue, username)
+        socket.on('message', (recievedMessage) => {
+            const { username, text, time } = recievedMessage
+            setChatValue([...chatValue, { username, text, time }])
+            console.log(recievedMessage)
         })
     }
+
     useEffect(() => {
-        // socket.on("room joined", (msg) => {
-        //     setLoginMessage([...loginMessage, msg])
-        //     console.log(loginMessage)
-        // })
+        socket.emit('room join', username, room)
+    }, [])
+
+    useEffect(() => {
         socket.on('joined', (msg) => { setJoined([...joined, msg]) })
-        socket.on("room join", (msg) => { console.log(msg); setJoined([...joined, msg]) })
-    }, [chatValue, loginMessage])
+        // socket.on("room join", (msg) => { console.log(msg); setJoined([...joined, msg]) })
+    }, [joined])
 
     return (
         <div>
             <h1>{room}</h1>
+
             <form onSubmit={readInput}>
                 <input ref={input} type="text" placeholder='chat' />
                 <button type='submit' onClick={readInput} >Submit</button>
             </form>
+
             <div>
                 {chatValue.map((chat) =>
-                    <li key={uuidv4}>{username}:{chat}</li>
+                    <li key={uuidv4}>{chat.username}:{chat.text}</li>
                 )}
             </div>
-            <div>
 
+            <div>
                 {joined.map((chat) =>
                     <li key={uuidv4}>bot:{chat}</li>
                 )}
             </div>
+
         </div >
 
     )
