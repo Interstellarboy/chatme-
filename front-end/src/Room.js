@@ -10,7 +10,8 @@ function Room() {
     const room = state.state.room
     let loggedUsername
     const input = useRef()
-    const [chatValue, setChatValue] = useState([{}])
+    const [flag, setFlag] = useState(true)
+    const [chatValue, setChatValue] = useState([])
     const [joined, setJoined] = useState([])
     const socket = io('http://localhost:9000')
 
@@ -19,14 +20,22 @@ function Room() {
         const inputValue = input.current.value
         socket.emit('get-message', inputValue, username)
         socket.on('message', (recievedMessage) => {
-            const { username, text, time } = recievedMessage
-            setChatValue([...chatValue, { username, text, time }])
+            // const { username, text, time } = recievedMessage
+            setChatValue(recievedMessage)
             console.log(recievedMessage)
+            localStorage.setItem('local', JSON.stringify(recievedMessage))
         })
+        // setFlag(!flag)
     }
-
+    // useEffect(() => {
+    //     socket.on('message', (recievedMessage) => {
+    //         setChatValue(recievedMessage)
+    //     })
+    // }, [flag])
     useEffect(() => {
         socket.emit('room join', username, room)
+        const messages = localStorage.getItem('local')
+        setChatValue(JSON.parse(messages))
     }, [])
 
     useEffect(() => {
@@ -44,14 +53,14 @@ function Room() {
             </form>
 
             <div>
-                {chatValue.map((chat) =>
-                    <li key={uuidv4}>{chat.username}:{chat.text}</li>
+                {chatValue?.map((chat) =>
+                    <li key={uuidv4()}>{chat.username}:{chat.text}</li>
                 )}
             </div>
 
             <div>
-                {joined.map((chat) =>
-                    <li key={uuidv4}>bot:{chat}</li>
+                {joined?.map((chat) =>
+                    <li key={uuidv4()}>bot:{chat}</li>
                 )}
             </div>
 

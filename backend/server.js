@@ -25,8 +25,7 @@ const io = new Server(httpServer, {
     }
 });
 
-// let last8Messages = []
-// let messageCounter = 0
+let last8Messages = []
 
 
 function userCreate(id, username, room) {
@@ -70,7 +69,13 @@ io.on("connection", (socket) => {
         // const userRoom = user[0].room
         // const username = user[0].username
         socket.join(user.room)
-        io.to(user.room).emit('message', formatMessage(username || "default", msg))
+        last8Messages.push(formatMessage(username, msg))
+
+        io.to(user.room).emit('message', last8Messages)
+        if (last8Messages.length >= 10) {
+            last8Messages.shift();
+        }
+
         // console.log(socket.id, users)
     })
 })
